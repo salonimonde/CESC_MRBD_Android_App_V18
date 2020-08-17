@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.provider.Settings;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -267,6 +268,39 @@ public class DialogCreator
 
         alert.setView(promptView);
         alert.setCancelable(false);
+        alert.show();
+    }
+
+
+    public static void showPermissionMessageDialog(final Context mContext, String message, String mImageDisplay) {
+//        CommonUtils.alertTone(mContext, R.raw.ping);
+        Typeface regular = App.getSansationRegularFont();
+        LayoutInflater layoutInflater = LayoutInflater.from(mContext);
+        View promptView = layoutInflater.inflate(R.layout.dialog_without_title, null);
+        final AlertDialog alert = new AlertDialog.Builder(mContext).create();
+        ImageView imageView = (ImageView) promptView.findViewById(R.id.image_view);
+        if (mImageDisplay.equals("error")) {
+            imageView.setImageResource(R.drawable.high_importance);
+        } else {
+            imageView.setImageResource(R.drawable.checked_green);
+        }
+        TextView msg = (TextView) promptView.findViewById(R.id.tv_msg);
+        msg.setTypeface(regular);
+        msg.setText(message);
+        Button ok = (Button) promptView.findViewById(R.id.btn_ok);
+        ok.setTypeface(regular);
+        ok.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Intent intent1 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent1.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Uri uri = Uri.fromParts("package", mContext.getApplicationContext().getPackageName(), null);
+                intent1.setData(uri);
+                mContext.startActivity(intent1);
+                alert.dismiss();
+
+            }
+        });
+        alert.setView(promptView);
         alert.show();
     }
 

@@ -746,4 +746,7 @@
     <string name="export_reading_image">Export Reading Image</string>
     <string name="import_reading">Import Reading *</string>
 
+    <string name="android_id">Your Android ID</string>
+
+
 </resources>

@@ -2,7 +2,9 @@ package com.cesc.mrbd.activity;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -11,15 +13,18 @@ import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.InputFilter;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,13 +66,15 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
     private String deviceToken = "";
     private UserProfile userProfile;
     private int versionCode;
+    private static int z = 0;
+    private ImageView login_image;
+    private String imeiNumber;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState)
-
-    {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        //mContext = this;
         mContext = this;
         regular = App.getSansationRegularFont();
         try {
@@ -80,6 +87,14 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             CommonUtils.askForPermissions(this, rl_login_view, App.getInstance().permissions);
         }
+
+        login_image.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                checkCounts();
+
+            }
+        });
     }
 
     private void initProgressDialog() {
@@ -103,19 +118,20 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
         mEmailView.setFilters(new InputFilter[]{new InputFilter.AllCaps()});
         rl_login_view = (RelativeLayout) findViewById(R.id.rl_login_view);
         mPasswordView = (EditText) findViewById(R.id.ed_password);
+        login_image = (ImageView) findViewById(R.id.login_image);
         mPasswordView.setTypeface(regular);
         Forget = (TextView) findViewById(R.id.forget);
         Forget.setTypeface(regular);
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mEmailSignInButton.setTypeface(regular);
         mEmailSignInButton.setOnClickListener(this);
-
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.email_sign_in_button:
+                Log.d("aaaaaaaaaa"," "+Build.DISPLAY);
                 CommonUtils.hideKeyBoard(this);
                 performLogin();
                 break;
@@ -211,38 +227,55 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
     private void performLogin() {
         mEmailView.setError(null);
         mPasswordView.setError(null);
-
         // Store values at the time of the login attempt.
         user_email = mEmailView.getText().toString().trim();
         String user_password = mPasswordView.getText().toString().trim();
 
-        // Check for a valid password, if the user entered one.
-        if (CommonUtils.isNetworkAvaliable(this) == true) {
-            if (!TextUtils.isEmpty(user_email)) {
-                if (isEmailValid(user_email)) {
-                    if (!TextUtils.isEmpty(user_password)) {
-                        if (isPasswordValid(user_password)) {
-                            if (pDialog != null && !pDialog.isShowing()) {
-                                pDialog.setMessage(getString(R.string.logging_in_please_wait));
-                                pDialog.show();
-                            }
-                            TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-//                            String imeiNumber = telephonyManager.getDeviceId();
-                            String imeiNumber = /*"911555000227422"*/"867482042297632";
-                            JsonObjectRequest request = WebRequests.loginRequest(this, Request.Method.POST, AppConstants.URL_LOGIN, AppConstants.REQUEST_LOGIN, this, user_email, user_password, imeiNumber);
-                            App.getInstance().addToRequestQueue(request, AppConstants.REQUEST_LOGIN);
-                        } else
-                            mPasswordView.setError(getString(R.string.error_invalid_password));
-                    } else
-                        mPasswordView.setError(getString(R.string.error_empty_password));
-                } else
-                    mEmailView.setError(getString(R.string.error_invalid_email));
-            } else
-                mEmailView.setError(getString(R.string.error_field_required));
-        } else
-            DialogCreator.showMessageDialog(mContext, getString(R.string.error_internet_not_connected), getString(R.string.error));
-    }
+        PackageManager pm = mContext.getPackageManager();
+        int hasPerm = pm.checkPermission(
+                Manifest.permission.READ_PHONE_STATE,
+                mContext.getPackageName());
+        if (hasPerm != PackageManager.PERMISSION_GRANTED) {
+            DialogCreator.showPermissionMessageDialog(mContext, "Please provide phone permission", "error");
+        } else {
+            // Check for a valid password, if the user entered one.
+            if (CommonUtils.isNetworkAvaliable(this) == true) {
+                if (!TextUtils.isEmpty(user_email)) {
+                    if (isEmailValid(user_email)) {
+                        if (!TextUtils.isEmpty(user_password)) {
+                            if (isPasswordValid(user_password)) {
+                                if (pDialog != null && !pDialog.isShowing()) {
+                                    pDialog.setMessage(getString(R.string.logging_in_please_wait));
+                                    pDialog.show();
+                                }
+                                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                                    TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+                                    imeiNumber = telephonyManager.getDeviceId();
+                                    Log.e("TAG","AndroidId" +imeiNumber);
 
+
+                                } else {
+                                    imeiNumber = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+                                    Log.e("TAG","imeiNumber" +imeiNumber);
+
+                                }
+                                /*TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+                                String imeiNumber = telephonyManager.getDeviceId();*/
+//                                String imeiNumber = /*"911555000227422"*//*"356129103114424"*/"860964049264779";
+                                JsonObjectRequest request = WebRequests.loginRequest(this, Request.Method.POST, AppConstants.URL_LOGIN, AppConstants.REQUEST_LOGIN, this, user_email, user_password, imeiNumber);
+                                App.getInstance().addToRequestQueue(request, AppConstants.REQUEST_LOGIN);
+                            } else
+                                mPasswordView.setError(getString(R.string.error_invalid_password));
+                        } else
+                            mPasswordView.setError(getString(R.string.error_empty_password));
+                    } else
+                        mEmailView.setError(getString(R.string.error_invalid_email));
+                } else
+                    mEmailView.setError(getString(R.string.error_field_required));
+            } else
+                DialogCreator.showMessageDialog(mContext, getString(R.string.error_internet_not_connected), getString(R.string.error));
+        }
+    }
 
     private void showMainActivity() {
         Intent i = new Intent(LoginActivity.this, LandingActivity.class);
@@ -257,7 +290,6 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
             return true;
         else
             return false;
-
     }
 
     private boolean isPasswordValid(String password) {
@@ -309,6 +341,36 @@ public class LoginActivity extends ParentActivity implements ServiceCaller, OnCl
                 }
                 break;
         }
+    }
+
+    private void checkCounts() {
+        z++;
+        if (z == 10) {
+            z = 0;
+            showDialogForAndroidID(mContext);
+        }
+    }
+
+    public void showDialogForAndroidID(final Context context) {
+        final Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.dailog_android_id);
+        final TextView txtAndroidId;
+        txtAndroidId = (TextView) dialog.findViewById(R.id.android_id);
+        Button ok = (Button) dialog.findViewById(R.id.btn_ok);
+        Window window = dialog.getWindow();
+        window.setLayout(ActionBar.LayoutParams.MATCH_PARENT, android.support.v7.app.ActionBar.LayoutParams.WRAP_CONTENT);
+        window.setGravity(Gravity.CENTER);
+        String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            dialog.show();
+            txtAndroidId.setText(androidId);
+        }
+        ok.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+
     }
 
 }
